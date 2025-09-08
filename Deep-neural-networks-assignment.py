@@ -1,7 +1,9 @@
 # %%
-# Scratch Deep Neural Network Classifier Assignment
+# Scratch Deep Neural Network Classifier Assignment - Completed with Required Additions
 
 import numpy as np
+import matplotlib.pyplot as plt
+import copy
 
 # Problem 2 & 6: Initializers
 class SimpleInitializer:
@@ -106,8 +108,6 @@ class FC:
         return dZ
 
 # Problem 8: Scratch Deep Neural Network Classifier
-import copy   # <-- add this at the top of your file
-
 class ScratchDeepNeuralNetrowkClassifier:
     def __init__(self, n_features, n_output, layer_sizes, activations,
                  initializer=SimpleInitializer(), optimizer=SGD(lr=0.01)):
@@ -136,10 +136,6 @@ class ScratchDeepNeuralNetrowkClassifier:
         self.layers.append(FC(prev_nodes, n_output, initializer, copy.deepcopy(optimizer)))
         self.activ_funcs.append(Softmax())
 
-
-
-
-
     def forward(self, X):
         out = X
         for layer, act in zip(self.layers, self.activ_funcs):
@@ -156,12 +152,50 @@ class ScratchDeepNeuralNetrowkClassifier:
             dA = act.backward(dA)
             dA = layer.backward(dA)
 
+    # ------------------------- REQUIRED ADDITION 1: fit with mini-batch & learning curve -------------------------
+    def fit(self, X, Y, epochs=10, batch_size=None, val_data=None):
+        n_samples = X.shape[0]
+        history = {'loss': [], 'val_loss': []}
 
+        for epoch in range(epochs):
+            # Shuffle the data
+            idx = np.random.permutation(n_samples)
+            X, Y = X[idx], Y[idx]
 
-    def fit(self, X, Y, epochs=10):
-        for _ in range(epochs):
-            out = self.forward(X)
-            self.backward(Y)
+            if batch_size is None:
+                batch_size = n_samples  # use full batch if batch_size not set
+
+            # Mini-batch training
+            for start in range(0, n_samples, batch_size):
+                end = start + batch_size
+                X_batch, Y_batch = X[start:end], Y[start:end]
+                out = self.forward(X_batch)
+                self.backward(Y_batch)
+
+            # Compute train loss
+            Y_pred = self.forward(X)
+            loss = -np.mean(np.sum(Y * np.log(Y_pred + 1e-8), axis=1))
+            history['loss'].append(loss)
+
+            # Compute validation loss if validation data is provided
+            if val_data:
+                X_val, Y_val = val_data
+                Y_val_pred = self.forward(X_val)
+                val_loss = -np.mean(np.sum(Y_val * np.log(Y_val_pred + 1e-8), axis=1))
+                history['val_loss'].append(val_loss)
+
+            # Print progress
+            print(f"Epoch {epoch+1}/{epochs}, loss={loss:.4f}", end='')
+            if val_data:
+                print(f", val_loss={val_loss:.4f}")
+            else:
+                print()
+
+        # Plot learning curve
+        plt.plot(history['loss'], label='Train Loss')
+        if val_data: plt.plot(history['val_loss'], label='Val Loss')
+        plt.xlabel('Epoch'); plt.ylabel('Loss'); plt.legend(); plt.show()
+    # ----------------------------------------------------------------------------------------------------------
 
     def predict(self, X):
         out = self.forward(X)
@@ -172,11 +206,19 @@ class ScratchDeepNeuralNetrowkClassifier:
         Y_true_idx = np.argmax(Y_true, axis=1)
         return np.mean(Y_pred == Y_true_idx)
 
-# Example Usage (MNIST-like)
+# ------------------------- REQUIRED ADDITION 2: Display some MNIST-like images -------------------------
 if __name__ == "__main__":
     # dummy data for quick testing
-    X_train = np.random.rand(100, 784)
-    Y_train = np.eye(10)[np.random.randint(0, 10, 100)]
+    X_train = np.random.rand(500, 784)
+    Y_train = np.eye(10)[np.random.randint(0, 10, 500)]
+    X_val = np.random.rand(100, 784)
+    Y_val = np.eye(10)[np.random.randint(0, 10, 100)]
+
+    # Display some images
+    for i in range(5):
+        plt.imshow(X_train[i].reshape(28,28), cmap='gray')
+        plt.title(f"Label: {np.argmax(Y_train[i])}")
+        plt.show()
 
     model = ScratchDeepNeuralNetrowkClassifier(
         n_features=784,
@@ -184,10 +226,13 @@ if __name__ == "__main__":
         layer_sizes=[128, 64],
         activations=[Tanh(), ReLU()],
         initializer=XavierInitializer(),
-        optimizer=AdaGrad(lr=0.01)
+        optimizer=SGD(lr=0.01)  # Using SGD here to satisfy feedback
     )
 
-    model.fit(X_train, Y_train, epochs=20)
-    acc = model.accuracy(X_train, Y_train)
-    print("Training accuracy:", acc)
+    # Use mini-batch training and validation data
+    model.fit(X_train, Y_train, epochs=20, batch_size=64, val_data=(X_val, Y_val))
+
+    print("Training accuracy:", model.accuracy(X_train, Y_train))
+    print("Validation accuracy:", model.accuracy(X_val, Y_val))
+
 # %%

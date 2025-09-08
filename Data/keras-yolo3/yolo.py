@@ -1,22 +1,24 @@
-# -*- coding: utf-8 -*-
+# %%-*- coding: utf-8 -*-
 """
 Class definition of YOLO_v3 style detection model on image and video
 """
-
 import colorsys
 import os
 from timeit import default_timer as timer
-
 import numpy as np
 from keras import backend as K
 from keras.models import load_model
 from keras.layers import Input
 from PIL import Image, ImageFont, ImageDraw
+import tensorflow as tf
 
 from yolo3.model import yolo_eval, yolo_body, tiny_yolo_body
 from yolo3.utils import letterbox_image
 import os
-from keras.utils import multi_gpu_model
+try:
+    from tensorflow.keras.utils import multi_gpu_model
+except ImportError:
+    multi_gpu_model = None
 
 class YOLO(object):
     _defaults = {
@@ -41,7 +43,6 @@ class YOLO(object):
         self.__dict__.update(kwargs) # and update with user overrides
         self.class_names = self._get_class()
         self.anchors = self._get_anchors()
-        self.sess = K.get_session()
         self.boxes, self.scores, self.classes = self.generate()
 
     def _get_class(self):
@@ -116,13 +117,16 @@ class YOLO(object):
         image_data /= 255.
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
 
-        out_boxes, out_scores, out_classes = self.sess.run(
-            [self.boxes, self.scores, self.classes],
-            feed_dict={
-                self.yolo_model.input: image_data,
-                self.input_image_shape: [image.size[1], image.size[0]],
-                K.learning_phase(): 0
-            })
+        results = self.yolo_model.predict(image_data)
+        out_boxes, out_scores, out_classes = yolo_eval(
+            results,
+            self.anchors,
+            len(self.class_names),
+            self.input_image_shape,
+            score_threshold=self.score,
+            iou_threshold=self.iou
+        )
+
 
         print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
 
@@ -167,7 +171,7 @@ class YOLO(object):
         return image
 
     def close_session(self):
-        self.sess.close()
+        K.clear_session()
 
 def detect_video(yolo, video_path, output_path=""):
     import cv2
@@ -209,3 +213,5 @@ def detect_video(yolo, video_path, output_path=""):
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     yolo.close_session()
+
+# %%
