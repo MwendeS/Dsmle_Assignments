@@ -11,8 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import fetch_california_housing
 
-# --- FORCE EAGER EXECUTION AT THE VERY START ---
-tf.config.run_functions_eagerly(True)
+# tf.config.run_functions_eagerly(True) # force execution at the start
 tf.random.set_seed(42)
 np.random.seed(42)
 
@@ -46,7 +45,7 @@ def problem1_mnist_official_style(epochs=3):
 # -------------------------
 # Problem 3 - Iris binary
 # -------------------------
-def problem3_iris_binary(epochs=50):
+def problem3_iris_binary(epochs=20):
     print_header("Problem 3 — Iris binary")
     iris = datasets.load_iris()
     X = iris.data
@@ -73,7 +72,7 @@ def problem3_iris_binary(epochs=50):
 # -------------------------
 # Problem 4 - Iris multi-class
 # -------------------------
-def problem4_iris_multiclass(epochs=80):
+def problem4_iris_multiclass(epochs=30):
     print_header("Problem 4 — Iris multi-class")
     iris = datasets.load_iris()
     X, y = iris.data, iris.target
@@ -96,7 +95,7 @@ def problem4_iris_multiclass(epochs=80):
 # -------------------------
 # Problem 5 - House Prices regression
 # -------------------------
-def problem5_house_prices_regression(epochs=100):
+def problem5_house_prices_regression(epochs=5):
     print_header("Problem 5 — House Prices regression")
     data = fetch_california_housing()
     X, y = data.data, data.target
@@ -112,7 +111,7 @@ def problem5_house_prices_regression(epochs=100):
     model.compile(optimizer="adam", loss="mse", metrics=["mae"])
 
     print("Training regression model...")
-    model.fit(X_train, y_train, validation_split=0.1, epochs=epochs, batch_size=32, verbose=0)
+    model.fit(X_train, y_train, validation_split=0.1, epochs=epochs, batch_size=32, verbose=1)
     loss, mae = model.evaluate(X_test, y_test, verbose=0)
     print(f"Regression test MSE: {loss:.4f}, MAE: {mae:.4f}")
 
@@ -144,9 +143,9 @@ def problem6_mnist_cnn(epochs=5):
 # -------------------------
 if __name__ == "__main__":
     problem1_mnist_official_style(epochs=3)
-    problem3_iris_binary(epochs=60)
-    problem4_iris_multiclass(epochs=80)
-    problem5_house_prices_regression(epochs=120)
+    problem3_iris_binary(epochs=30)
+    problem4_iris_multiclass(epochs=30)
+    problem5_house_prices_regression(epochs=30)
     problem6_mnist_cnn(epochs=3)
 
     print("\nAll done! This WILL run cleanly on Windows/VS Code.")

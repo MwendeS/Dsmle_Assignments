@@ -115,7 +115,7 @@ class ScratchSimpleNeuralNetwork:
     
     def predict(self, X):
         return np.argmax(self.forward(X), axis=1)
-
+# %%
 # Step 5: Train and Evaluate
 nn = ScratchSimpleNeuralNetwork()
 nn.fit(X_train, y_train_one_hot, epochs=5, batch_size=20)
@@ -125,7 +125,7 @@ y_val_pred = nn.predict(X_val)
 y_val_true = np.argmax(y_val_one_hot, axis=1)
 accuracy = np.mean(y_val_pred == y_val_true)
 print("Validation Accuracy:", accuracy)
-
+# %%
 # Step 6: Plot example images with predictions
 num = 9
 plt.figure(figsize=(6,6))

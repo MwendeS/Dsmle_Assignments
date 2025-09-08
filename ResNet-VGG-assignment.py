@@ -1,13 +1,11 @@
 # %% 
 # TGS Salt Identification Challenge - Segmentation
-
 # 1. IMPORT LIBRARIES
 import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from glob import glob
-
 # Keras and TensorFlow imports
 from keras.models import Model
 from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPooling2D, concatenate, Dropout
@@ -15,15 +13,14 @@ from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.applications import ResNet50, VGG16
 from sklearn.model_selection import train_test_split
-
+from tensorflow.keras.layers import UpSampling2D #New line
 # For image processing
 from skimage.io import imread
 from skimage.transform import resize
-
-
 # 2. LOAD DATA
 # Download dataset from Kaggle and set the path
-DATA_PATH = "/content/train/"  # Change this if your path is different
+# DATA_PATH = "/content/train/"  # Change this if your path is different
+DATA_PATH = r"C:\Users\admin\DevWorkspace\DSMLE_Course\Assignments\Data\tgs_salt"
 
 # Load image ids
 train_images = sorted(glob(os.path.join(DATA_PATH, "images", "*.png")))
@@ -31,7 +28,6 @@ train_masks = sorted(glob(os.path.join(DATA_PATH, "masks", "*.png")))
 
 print("Number of images:", len(train_images))
 print("Number of masks:", len(train_masks))
-
 
 # 3. PREPROCESS DATA
 IMG_HEIGHT = 128
@@ -58,12 +54,19 @@ Y = np.array([preprocess_mask(p) for p in train_masks])
 # Train-test split
 X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.1, random_state=42)
 
+
+# Use a smaller subset for quick testing
+X_train = X_train[:2]
+Y_train = Y_train[:2]
+X_val = X_val[:2]
+Y_val = Y_val[:2]
+
+
+
 print("X_train shape:", X_train.shape)
 print("Y_train shape:", Y_train.shape)
 
-
 # 4. DEFINE U-NET WITH TRANSFER LEARNING
-
 def build_unet(encoder='resnet', input_shape=(128,128,1)):
     inputs = Input(input_shape)
     
@@ -72,10 +75,13 @@ def build_unet(encoder='resnet', input_shape=(128,128,1)):
     
     # Encoder (pretrained)
     if encoder == 'resnet':
-        base_model = ResNet50(weights='imagenet', include_top=False, input_tensor=x)
-        skip_connection_layers = ["input_1", "conv1_relu", "conv2_block3_out", "conv3_block4_out", "conv4_block6_out"]
+        #base_model = ResNet50(weights='imagenet', include_top=False, input_tensor=x)
+        base_model = ResNet50(weights=None, include_top=False, input_tensor=x)
+        #skip_connection_layers = ["input_1", "conv1_relu", "conv2_block3_out", "conv3_block4_out", "conv4_block6_out"]
+        skip_connection_layers = ["conv1_relu", "conv2_block3_out", "conv3_block4_out", "conv4_block6_out"]
+
     elif encoder == 'vgg':
-        base_model = VGG16(weights='imagenet', include_top=False, input_tensor=x)
+        base_model = VGG16(weights= None, include_top=False, input_tensor=x)
         skip_connection_layers = ["block1_conv2", "block2_conv2", "block3_conv3", "block4_conv3", "block5_conv3"]
     else:
         raise ValueError("Encoder not supported")
@@ -87,16 +93,15 @@ def build_unet(encoder='resnet', input_shape=(128,128,1)):
     # Decoder
     for i in reversed(range(len(skips))):
         x = Conv2DTranspose(256 // (2**i), (2,2), strides=(2,2), padding='same')(x)
-        x = concatenate([x, skips[i]])
+        x = concatenate([x, skips[i-1]])
         x = Conv2D(256 // (2**i), (3,3), activation='relu', padding='same')(x)
         x = Conv2D(256 // (2**i), (3,3), activation='relu', padding='same')(x)
     
     outputs = Conv2D(1, (1,1), activation='sigmoid')(x)
-    
+    outputs = UpSampling2D((2, 2))(outputs) # NEW LINE - ensures 128x128 output
     model = Model(inputs, outputs)
-    model.compile(optimizer=Adam(lr=1e-4), loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=Adam(learning_rate=1e-4), loss='binary_crossentropy', metrics=['accuracy'])
     return model
-
 
 # 5. TRAIN AND VALIDATE
 def train_model(encoder_name):
@@ -109,8 +114,8 @@ def train_model(encoder_name):
     history = model.fit(
         X_train, Y_train,
         validation_data=(X_val, Y_val),
-        batch_size=8,
-        epochs=20,
+        batch_size=16,
+        epochs=2,
         callbacks=[checkpoint, earlystop]
     )
     return model, history
@@ -160,3 +165,4 @@ visualize_predictions(resnet_model, X_val, Y_val)
 
 print("\nVGG Predictions:")
 visualize_predictions(vgg_model, X_val, Y_val)
+# %%

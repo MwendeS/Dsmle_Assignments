@@ -133,3 +133,5 @@ rnn.fit(x, y, epochs=50)
 # Forward again to see improvement
 y_pred = rnn.forward(x)
 print("Predicted output after training:", y_pred)
+
+# %%

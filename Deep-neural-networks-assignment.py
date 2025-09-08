@@ -102,10 +102,12 @@ class FC:
         self.dW = np.dot(self.X.T, dA) / self.X.shape[0]
         self.dB = np.sum(dA, axis=0, keepdims=True) / self.X.shape[0]
         dZ = np.dot(dA, self.W.T)
-        self = self.optimizer.update(self)
+        self.optimizer.update(self)
         return dZ
-# %%
+
 # Problem 8: Scratch Deep Neural Network Classifier
+import copy   # <-- add this at the top of your file
+
 class ScratchDeepNeuralNetrowkClassifier:
     def __init__(self, n_features, n_output, layer_sizes, activations,
                  initializer=SimpleInitializer(), optimizer=SGD(lr=0.01)):
@@ -123,21 +125,28 @@ class ScratchDeepNeuralNetrowkClassifier:
         self.activ_funcs = []
 
         prev_nodes = n_features
+        # Hidden layers
         for size, act in zip(layer_sizes, activations):
-            self.layers.append(FC(prev_nodes, size, initializer, optimizer))
+            # give each FC its own optimizer copy
+            self.layers.append(FC(prev_nodes, size, initializer, copy.deepcopy(optimizer)))
             self.activ_funcs.append(act)
             prev_nodes = size
+
         # Output layer with Softmax
-        self.layers.append(FC(prev_nodes, n_output, initializer, optimizer))
+        self.layers.append(FC(prev_nodes, n_output, initializer, copy.deepcopy(optimizer)))
         self.activ_funcs.append(Softmax())
+
+
+
+
 
     def forward(self, X):
         out = X
         for layer, act in zip(self.layers, self.activ_funcs):
             out = act.forward(layer.forward(out))
         return out
-    
-        def backward(self, Y):
+
+    def backward(self, Y):
         # First step: gradient from softmax cross-entropy
         dA = self.activ_funcs[-1].backward(Y)
         # Backprop through the output layer (no extra activation here)
@@ -146,6 +155,7 @@ class ScratchDeepNeuralNetrowkClassifier:
         for layer, act in reversed(list(zip(self.layers[:-1], self.activ_funcs[:-1]))):
             dA = act.backward(dA)
             dA = layer.backward(dA)
+
 
 
     def fit(self, X, Y, epochs=10):
