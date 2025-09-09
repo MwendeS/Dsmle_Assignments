@@ -1,9 +1,10 @@
 # %%
-# Scratch Deep Neural Network Classifier Assignment - Completed with Required Additions
+# Scratch Deep Neural Network Classifier Assignment
 
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
+from tensorflow.keras.datasets import mnist
 
 # Problem 2 & 6: Initializers
 class SimpleInitializer:
@@ -152,7 +153,7 @@ class ScratchDeepNeuralNetrowkClassifier:
             dA = act.backward(dA)
             dA = layer.backward(dA)
 
-    # ------------------------- REQUIRED ADDITION 1: fit with mini-batch & learning curve -------------------------
+    # REQUIRED 1: fit with mini-batch & learning curve
     def fit(self, X, Y, epochs=10, batch_size=None, val_data=None):
         n_samples = X.shape[0]
         history = {'loss': [], 'val_loss': []}
@@ -195,7 +196,7 @@ class ScratchDeepNeuralNetrowkClassifier:
         plt.plot(history['loss'], label='Train Loss')
         if val_data: plt.plot(history['val_loss'], label='Val Loss')
         plt.xlabel('Epoch'); plt.ylabel('Loss'); plt.legend(); plt.show()
-    # ----------------------------------------------------------------------------------------------------------
+    # ----------------------------------------
 
     def predict(self, X):
         out = self.forward(X)
@@ -205,34 +206,50 @@ class ScratchDeepNeuralNetrowkClassifier:
         Y_pred = self.predict(X)
         Y_true_idx = np.argmax(Y_true, axis=1)
         return np.mean(Y_pred == Y_true_idx)
-
-# ------------------------- REQUIRED ADDITION 2: Display some MNIST-like images -------------------------
+# %%
+# REQUIRED 2: MNIST images
 if __name__ == "__main__":
-    # dummy data for quick testing
-    X_train = np.random.rand(500, 784)
-    Y_train = np.eye(10)[np.random.randint(0, 10, 500)]
-    X_val = np.random.rand(100, 784)
-    Y_val = np.eye(10)[np.random.randint(0, 10, 100)]
+    # Load MNIST
+    (X_train_mnist, y_train_mnist), (X_test_mnist, y_test_mnist) = mnist.load_data()
+    X_train_mnist = X_train_mnist / 255.0
+    X_test_mnist = X_test_mnist / 255.0
 
-    # Display some images
+    # Flatten
+    X_train_flat = X_train_mnist.reshape(-1, 28*28)
+    X_test_flat = X_test_mnist.reshape(-1, 28*28)
+
+    # One-hot encode labels
+    Y_train_mnist = np.eye(10)[y_train_mnist]
+    Y_test_mnist = np.eye(10)[y_test_mnist]
+
+    # Display 5 MNIST images
     for i in range(5):
-        plt.imshow(X_train[i].reshape(28,28), cmap='gray')
-        plt.title(f"Label: {np.argmax(Y_train[i])}")
+        plt.imshow(X_train_mnist[i], cmap='gray')
+        plt.title(f"Label: {y_train_mnist[i]}")
+        plt.axis('off')
         plt.show()
 
+    # Create model
     model = ScratchDeepNeuralNetrowkClassifier(
         n_features=784,
         n_output=10,
         layer_sizes=[128, 64],
         activations=[Tanh(), ReLU()],
         initializer=XavierInitializer(),
-        optimizer=SGD(lr=0.01)  # Using SGD here to satisfy feedback
+        optimizer=SGD(lr=0.01)
     )
 
-    # Use mini-batch training and validation data
-    model.fit(X_train, Y_train, epochs=20, batch_size=64, val_data=(X_val, Y_val))
+    # Train model
+    model.fit(
+        X_train_flat,
+        Y_train_mnist,
+        epochs=20,
+        batch_size=64,
+        val_data=(X_test_flat, Y_test_mnist)
+    )
 
-    print("Training accuracy:", model.accuracy(X_train, Y_train))
-    print("Validation accuracy:", model.accuracy(X_val, Y_val))
+    # Print accuracies
+    print("Training accuracy:", model.accuracy(X_train_flat, Y_train_mnist))
+    print("Validation accuracy:", model.accuracy(X_test_flat, Y_test_mnist))
 
 # %%
